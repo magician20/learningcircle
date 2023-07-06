@@ -1,0 +1,91 @@
+# Application properities
+scheme: http
+origins: http://localhost:4200,https://localhost:4200
+# allow access to any url start with public (not used)
+# permit-all: /public/**
+
+keycloak-port: 8080
+keycloak-local: localhost
+# keycloak-container: 172.17.0.2
+keycloak-realm: uniSpace
+keycloak-resource: unispace-api
+#cause iam runing keycloak inside docker so i changed localhost
+keycloak-issuer: ${scheme}://${keycloak-local}:${keycloak-port}/realms/${keycloak-realm}
+
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
+
+server:
+  port: 8082
+  error:
+    include-message: always
+  ssl:
+    enabled: false
+
+spring:
+  output.ansi.enabled: always
+  application.name: greeting
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:localhost;DB_CLOSE_ON_EXIT=FALSE
+    username: admin
+    password:
+  # security:
+  #   oauth2:
+  #     resourceserver:
+  #       # OIDC config Keycloak
+  #       jwt:
+  #         issuer-uri: ${keycloak-issuer}
+  #         # verify the signature of the token (token or certs)
+  #         jwk-set-uri: ${spring.security.oauth2.resourceserver.jwt.issuer-uri}/protocol/openid-connect/certs
+
+com:
+  c4-soft:
+    springaddons:
+      security:
+        cors:
+        - path: /**
+          allowed-origins: ${origins}
+        issuers:
+        - location: ${keycloak-issuer}
+          username-claim: preferred_username
+          authorities:
+          - path: $.realm_access.roles
+          - path: $.resource_access.*.roles
+        permit-all:
+        - "/api/test/anonymous"
+        - "/actuator/health/readiness"
+        - "/actuator/health/liveness"
+        - "/v3/api-docs/**"
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+# Spring profile to enable SSL
+---
+scheme: https
+keycloak-port: ${keycloak-port}
+
+server:
+  ssl:
+    enabled: true
+
+spring:
+  config:
+    activate:
+      on-profile: ssl

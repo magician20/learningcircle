@@ -1,0 +1,163 @@
+# Application Properties
+scheme: http
+keycloak-local: localhost
+# keycloak-container: 172.17.0.2
+keycloak-port: 8080
+keycloak-realm: uniSpace
+keycloak-client-id: unispace-api
+keycloak-secret: au8c6FopecI7rsiPYQVBbdOuvDYxHpff
+keycloak-issuer: ${scheme}://${keycloak-local}:${keycloak-port}/realms/${keycloak-realm}
+
+# gateway uri
+gateway-uri: ${scheme}://localhost:${server.port}
+# api uri
+greetings-api-uri: ${scheme}://localhost:8081
+# frontend uri
+ui-uri: ${scheme}://localhost:4200
+
+server:
+  port: 8081
+  error:
+    include-message: always
+  ssl:
+    enabled: false
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  output:
+   ansi:
+      enabled: always    
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            issuer-uri: ${keycloak-issuer}
+        registration:
+          keycloak-confidential-user:
+            authorization-grant-type: authorization_code
+            client-name: Keycloak
+            client-id: ${keycloak-client-id}
+            client-secret: ${keycloak-secret}
+            provider: keycloak
+            scope: openid,profile,email,offline_access,roles
+
+cloud:
+    gateway:
+      default-filters:
+      - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      - SaveSession
+      routes:
+      # is redirecting gateway index to UI one
+      # - id: home
+      #   uri: ${gateway-uri}
+      #   predicates:
+      #   - Path=/
+      #   filters:
+      #   - RedirectTo=301,${gateway-uri}/ui/
+      - id: space-api-bff
+        uri: ${greetings-api-uri}
+        predicates:
+        - Path=/api/test/**
+        filters:
+        # filter is applied to replace session cookies with OAuth2 access tokens
+        - TokenRelay=
+        # filter removes the first 3 segments of request path
+        - StripPrefix=3
+      - id: greetings-api-oauth2-clients
+        uri: ${greetings-api-uri}
+        predicates:
+        - Path=/greet/
+        - Path=/restricted/
+        filters:
+        - StripPrefix=2
+      # - id: ui
+      #   uri: ${ui-uri}
+      #   predicates:
+      #   - Path=/ui/**
+      - id: letsencrypt
+        uri: https://cert-manager-webhook
+        predicates:
+        - Path=/.well-known/acme-challenge/** 
+
+com:
+  c4-soft:
+    springaddons:
+      security:
+        issuers:
+        - location: ${keycloak-issuer}
+          username-claim: preferred_username
+          authorities:
+          - path: $.realm_access.roles
+          - path: $.resource_access.*.roles
+        client:
+          # used to work with absolute URIs in login process
+          client-uri: ${gateway-uri}
+          # an array of path matchers for routes processed by the auto-configured client security filter-chain.
+          # If null auto-configuration is turned off. Here, it will filter all traffic.
+          security-matchers: /**
+          # a list of path matchers for resources accessible to all requests, 
+          # even unauthorized ones (end-points not listed here like /logout will be accessible only to authenticated users)
+          permit-all:
+          # used by Spring during the authorizatoin-code flow
+          - /login/**
+          - /oauth2/**
+          # unauthorized users can display the Angular app containing a landing page and login buttons
+          - /
+          - /ui/**
+          # end-points on the gateway itself exposing the different URIs to initiate an authorization-code flow
+          - /login-options
+          - /me
+          # public access to Gateway OpenAPI 
+          - /v3/api-docs/**
+          - /api/test
+          - /actuator/health/readiness
+          - /actuator/health/liveness
+          - /.well-known/acme-challenge/**
+          csrf: cookie-accessible-from-js
+          login-path: /ui/
+          post-login-redirect-path: /ui/
+          post-logout-redirect-path: /ui/
+          back-channel-logout-enabled: true
+          
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    org:
+      springframework:
+        security: INFO
+
+# SSL profile       
+---
+scheme: https
+keycloak-port: ${keycloak-port}
+
+spring:
+  config:
+    activate:
+      on-profile: ssl
+  cloud:
+    gateway:
+      default-filters:
+      - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      - SaveSession
+      - SecureHeaders
+server:
+  ssl:
+    enabled: true

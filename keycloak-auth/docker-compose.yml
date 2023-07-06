@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+  # so this container will be going to hold obly keycloak DB.
+  # it should be a container for each microservice (unique name for each DB and Volume)
+  #    postgres-fraud:
+  #    container_name: postgres-fraud
+  postgres-auth:
+    container_name: postgres-auth
+    image: postgres
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+      PGDATA: /data/keycloak_db
+    volumes:
+      - postgres:/data/keycloak_db
+    ports:
+      - "5432:5432"
+    networks:
+      - keycloak-network
+    restart: unless-stopped
+
+  keycloak:
+    # uay.io/keycloak/keycloak:legacy or latest -- bitnami/keycloak:latest
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      DB_VENDOR: POSTGRES
+      DB_ADDR: postgres-auth
+      DB_DATABASE: /data/keycloak_db
+      DB_USER: keycloak
+      DB_SCHEMA: public
+      DB_PASSWORD: password
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+      # Uncomment the line below if you want to specify JDBC parameters. The parameter below is just an example, and it shouldn't be used in production without knowledge. It is highly recommended that you read the PostgreSQL JDBC driver documentation in order to use it.
+      #JDBC_PARAMS: "ssl=true"
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres-auth
+
+volumes:
+  postgres:
+    driver: local
