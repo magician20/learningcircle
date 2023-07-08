@@ -16,8 +16,7 @@
 	<name>greetings-api</name>
 	<description>Test Api</description>
 	<properties>
-		<spring-addons.version>6.1.11</spring-addons.version>
-		<springaddons.version>6.1.17</springaddons.version>
+		<springaddons.version>6.2.0</springaddons.version>
 		<app-type>webflux</app-type><!-- alternative value is webmvc !-->
 		<token>jwt</token><!-- alternative value is introspecting !-->
 	</properties>
@@ -39,7 +38,7 @@
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
 		</dependency>
-
+		<!-- already add to springaddons -->
 		<!-- <dependency>
 			<groupId>com.jayway.jsonpath</groupId>
 			<artifactId>json-path</artifactId>

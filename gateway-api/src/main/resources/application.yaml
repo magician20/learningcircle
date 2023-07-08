@@ -5,15 +5,14 @@ keycloak-local: localhost
 keycloak-port: 8080
 keycloak-realm: uniSpace
 keycloak-client-id: unispace-api
-keycloak-secret: au8c6FopecI7rsiPYQVBbdOuvDYxHpff
+keycloak-secret: hGWhpf30BkhSXmbVdDkFoDuVwtmbZUCY
 keycloak-issuer: ${scheme}://${keycloak-local}:${keycloak-port}/realms/${keycloak-realm}
 
-# gateway uri
+# gateway uri  port 8081
 gateway-uri: ${scheme}://localhost:${server.port}
-# api uri
-greetings-api-uri: ${scheme}://localhost:8081
+# api uri port 8082
+greetings-api-uri: ${scheme}://localhost:8082
 # frontend uri
-ui-uri: ${scheme}://localhost:4200
 
 server:
   port: 8081
@@ -42,6 +41,7 @@ spring:
             client-secret: ${keycloak-secret}
             provider: keycloak
             scope: openid,profile,email,offline_access,roles
+            # redirect-uri: "{baseUrl}/login/oauth2/code/keycloak"
 
 cloud:
     gateway:
@@ -49,33 +49,26 @@ cloud:
       - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
       - SaveSession
       routes:
-      # is redirecting gateway index to UI one
-      # - id: home
-      #   uri: ${gateway-uri}
-      #   predicates:
-      #   - Path=/
-      #   filters:
-      #   - RedirectTo=301,${gateway-uri}/ui/
-      - id: space-api-bff
+      - id: home
+        uri: ${gateway-uri}
+        predicates:
+        - Path=/
+        filters:
+        - RedirectTo=301,${gateway-uri}/ui/      
+      - id: greetings-api
+        uri: ${greetings-api-uri}
+        predicates:
+        - Path=/v1/**
+        filters:
+        - TokenRelay=
+        # - StripPrefix=1
+      - id: test-api
         uri: ${greetings-api-uri}
         predicates:
         - Path=/api/test/**
         filters:
-        # filter is applied to replace session cookies with OAuth2 access tokens
         - TokenRelay=
-        # filter removes the first 3 segments of request path
-        - StripPrefix=3
-      - id: greetings-api-oauth2-clients
-        uri: ${greetings-api-uri}
-        predicates:
-        - Path=/greet/
-        - Path=/restricted/
-        filters:
-        - StripPrefix=2
-      # - id: ui
-      #   uri: ${ui-uri}
-      #   predicates:
-      #   - Path=/ui/**
+        # - StripPrefix=2        
       - id: letsencrypt
         uri: https://cert-manager-webhook
         predicates:
@@ -104,11 +97,8 @@ com:
           - /login/**
           - /oauth2/**
           # unauthorized users can display the Angular app containing a landing page and login buttons
-          - /
-          - /ui/**
           # end-points on the gateway itself exposing the different URIs to initiate an authorization-code flow
-          - /login-options
-          - /me
+          # - /ui/**          
           # public access to Gateway OpenAPI 
           - /v3/api-docs/**
           - /api/test
@@ -116,9 +106,9 @@ com:
           - /actuator/health/liveness
           - /.well-known/acme-challenge/**
           csrf: cookie-accessible-from-js
-          login-path: /ui/
-          post-login-redirect-path: /ui/
-          post-logout-redirect-path: /ui/
+          login-path: /
+          post-login-redirect-path: /
+          post-logout-redirect-path: /
           back-channel-logout-enabled: true
           
 management:
