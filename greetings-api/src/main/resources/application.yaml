@@ -39,7 +39,7 @@ spring:
         # OIDC config Keycloak
         jwt:
           issuer-uri: ${keycloak-issuer}
-          # verify the signature of the token (token or certs)
+          # verify the signature of the token
           jwk-set-uri: ${spring.security.oauth2.resourceserver.jwt.issuer-uri}/protocol/openid-connect/certs
 
 com:

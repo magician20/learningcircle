@@ -35,13 +35,14 @@ spring:
             issuer-uri: ${keycloak-issuer}
         registration:
           keycloak-confidential-user:
-            authorization-grant-type: authorization_code
+           # authorization_code or client-credentials
+            authorization-grant-type: client-credentials
             client-name: Keycloak
             client-id: ${keycloak-client-id}
             client-secret: ${keycloak-secret}
             provider: keycloak
             scope: openid,profile,email,offline_access,roles
-            # redirect-uri: "{baseUrl}/login/oauth2/code/keycloak"
+            #redirect-uri: "{baseUrl}/login/oauth2/code/keycloak"
 
 cloud:
     gateway:
@@ -101,7 +102,6 @@ com:
           # - /ui/**          
           # public access to Gateway OpenAPI 
           - /v3/api-docs/**
-          - /api/test
           - /actuator/health/readiness
           - /actuator/health/liveness
           - /.well-known/acme-challenge/**
